@@ -1,1 +1,9 @@
-{}
+{
+  "delivery_date": "2026-11-13",
+  "sent": [
+    "ai",
+    "news",
+    "fact"
+  ],
+  "rayban_sent": true
+}
