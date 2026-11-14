@@ -5,9 +5,9 @@ on:
     branches: [main]
     paths: ['.github/workflows/morning.yml'] # Recover today's digest after schedule repairs.
   schedule:
-    - cron: '15 4 * * *' # 09:45 IST. Prepare, then wait until 10:00 IST.
-    - cron: '35 4 * * *' # 10:05 IST backup.
-    - cron: '15 5-8 * * *' # 10:45, 11:45, 12:45, 13:45 IST catch-up attempts.
+    - cron: '15-59/5 4 * * *' # 09:45, 09:50, ... 10:25 IST.
+    - cron: '*/5 5-17 * * *' # Every five minutes, 10:30 through 23:25 IST.
+    - cron: '0-25/5 18 * * *' # Every five minutes, 23:30 through 23:55 IST.
   workflow_dispatch:
     inputs:
       mode:
@@ -32,28 +32,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run checks
-        run: python -m unittest discover -s tests -v
       - name: Check today's delivery state
         id: delivery
         env:
           RUN_MODE: ${{ inputs.mode || 'digest' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python - <<'PY'
           from datetime import datetime
-          from zoneinfo import ZoneInfo
-          from pathlib import Path
-          import json
           import os
-          path = Path('data/state.json')
-          state = json.loads(path.read_text()) if path.exists() else {}
-          today = datetime.now(ZoneInfo('Asia/Kolkata')).date().isoformat()
-          complete = state.get('delivery_date') == today and {'ai', 'news', 'fact'}.issubset(state.get('sent', []))
-          skip = complete and os.environ['RUN_MODE'] == 'digest'
+          import spark
+          skip = spark.skip_attempt(spark.load_state(), datetime.now(spark.IST), os.environ['EVENT_NAME'], os.environ['RUN_MODE'])
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('skip=' + str(skip).lower() + '\n')
-          print('Already delivered today; skipping.' if skip else 'Delivery or manual test required.')
+          print('No delivery needed for this attempt.' if skip else 'Delivery or manual test required.')
           PY
+      - name: Run checks
+        if: steps.delivery.outputs.skip != 'true'
+        run: python -m unittest discover -s tests -v
       - name: Prepare and deliver
         if: steps.delivery.outputs.skip != 'true'
         env:
@@ -63,7 +59,7 @@ jobs:
           RUN_MODE: ${{ inputs.mode || 'digest' }}
         run: |
           if [ "$EVENT_NAME" = "schedule" ]; then
-            python spark.py --mode digest --wait-until-ten
+            python spark.py --mode digest --wait-until-delivery
           else
             python spark.py --mode "$RUN_MODE"
           fi

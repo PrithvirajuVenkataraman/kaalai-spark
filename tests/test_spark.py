@@ -21,14 +21,14 @@ class SparkTests(unittest.TestCase):
         self.assertEqual(len(spark.select_news([item], used, 2)), 1)
         self.assertEqual(spark.select_news([dict(item, url='https://other.com/a')], used, 2), [])
 
-    def test_waits_until_ten_but_not_after(self):
+    def test_waits_until_nine_fifty_but_not_after(self):
         clock = [datetime(2026, 11, 13, 9, 45, tzinfo=spark.IST)]
         waits = []
         def sleep(seconds):
             waits.append(seconds)
             clock[0] += timedelta(seconds=seconds)
         spark.wait_until_delivery(lambda: clock[0], sleep)
-        self.assertEqual(sum(waits), 900)
+        self.assertEqual(sum(waits), 300)
         self.assertLessEqual(max(waits), 30)
         waits.clear()
         spark.wait_until_delivery(lambda: clock[0], sleep)
@@ -46,6 +46,28 @@ class SparkTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError) as caught:
                     spark.send_telegram('hello')
         self.assertNotIn('secret-value', str(caught.exception))
+
+    def test_retry_gate(self):
+        now = datetime(2026, 11, 14, 9, 55, tzinfo=spark.IST)
+        complete = {'delivery_date': '2026-11-14', 'sent': ['ai', 'news', 'fact']}
+        partial = dict(complete, sent=['ai'])
+        yesterday = dict(complete, delivery_date='2026-11-13')
+        self.assertTrue(spark.skip_attempt(complete, now, 'schedule', 'digest'))
+        self.assertFalse(spark.skip_attempt(partial, now, 'schedule', 'digest'))
+        self.assertFalse(spark.skip_attempt(yesterday, now, 'schedule', 'digest'))
+        self.assertTrue(spark.skip_attempt({}, now.replace(hour=8), 'schedule', 'digest'))
+        self.assertFalse(spark.skip_attempt({}, now.replace(minute=45), 'schedule', 'digest'))
+        self.assertFalse(spark.skip_attempt(complete, now, 'workflow_dispatch', 'test'))
+        self.assertFalse(spark.skip_attempt(complete, now, 'workflow_dispatch', 'preview'))
+
+    def test_completed_digest_skips_collection_and_sending(self):
+        now = datetime.now(spark.IST)
+        state = {'delivery_date': now.date().isoformat(), 'sent': ['ai', 'news', 'fact']}
+        with patch('sys.argv', ['spark.py', '--mode', 'digest']), patch('spark.load_state', return_value=state):
+            with patch('spark.build_digest') as build, patch('spark.send_telegram') as send:
+                spark.main()
+                build.assert_not_called()
+                send.assert_not_called()
 
     def test_first_fact_does_not_require_network(self):
         text, key = spark.fact_story(datetime.now(spark.IST), {})

@@ -249,29 +249,45 @@ def save_state(state):
 
 def wait_until_delivery(now_func=lambda: datetime.now(IST), sleeper=time.sleep):
     now = now_func()
-    target = now.replace(hour=10, minute=0, second=0, microsecond=0)
+    target = now.replace(hour=9, minute=50, second=0, microsecond=0)
     while now < target:
         sleeper(min(30, (target - now).total_seconds()))
         now = now_func()
 
 
+def delivery_complete(state, now):
+    return (state.get('delivery_date') == now.date().isoformat()
+            and {'ai', 'news', 'fact'}.issubset(state.get('sent', [])))
+
+
+def skip_attempt(state, now, event, mode):
+    if mode != 'digest':
+        return False
+    if event == 'schedule' and (now.hour, now.minute) < (9, 45):
+        return True
+    return delivery_complete(state, now)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', choices=['test', 'preview', 'digest'], default='preview')
-    parser.add_argument('--wait-until-ten', action='store_true')
+    parser.add_argument('--wait-until-delivery', action='store_true')
     args = parser.parse_args()
     if args.mode == 'test':
-        send_telegram('KaalaiSpark is connected. Your daily AI, news, and history updates will target 10:00 AM IST. This test does not change your daily delivery state.')
+        send_telegram('KaalaiSpark is connected. Your daily AI, news, and history updates will target 9:50 AM IST. This test does not change your daily delivery state.')
         print('Telegram test delivered.')
         return
     now = datetime.now(IST)
     state = load_state()
+    if skip_attempt(state, now, os.environ.get('EVENT_NAME', ''), args.mode):
+        print('No delivery needed for this attempt.')
+        return
     messages = build_digest(now, state)
     if args.mode == 'preview':
         for _, message, _ in messages:
             print(message + '\n\n')
         return
-    if args.wait_until_ten:
+    if args.wait_until_delivery:
         wait_until_delivery()
     if datetime.now(IST).date() != now.date():
         raise RuntimeError('Prepared digest expired. Run again for the current date.')
