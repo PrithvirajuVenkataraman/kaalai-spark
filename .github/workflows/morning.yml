@@ -1,8 +1,13 @@
 name: KaalaiSpark Morning
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/morning.yml'] # Recover today's digest after schedule repairs.
   schedule:
     - cron: '15 4 * * *' # 09:45 IST. Prepare, then wait until 10:00 IST.
+    - cron: '35 4 * * *' # 10:05 IST backup.
+    - cron: '15 5-8 * * *' # 10:45, 11:45, 12:45, 13:45 IST catch-up attempts.
   workflow_dispatch:
     inputs:
       mode:
@@ -29,7 +34,28 @@ jobs:
           python-version: '3.12'
       - name: Run checks
         run: python -m unittest discover -s tests -v
+      - name: Check today's delivery state
+        id: delivery
+        env:
+          RUN_MODE: ${{ inputs.mode || 'digest' }}
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from pathlib import Path
+          import json
+          import os
+          path = Path('data/state.json')
+          state = json.loads(path.read_text()) if path.exists() else {}
+          today = datetime.now(ZoneInfo('Asia/Kolkata')).date().isoformat()
+          complete = state.get('delivery_date') == today and {'ai', 'news', 'fact'}.issubset(state.get('sent', []))
+          skip = complete and os.environ['RUN_MODE'] == 'digest'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('skip=' + str(skip).lower() + '\n')
+          print('Already delivered today; skipping.' if skip else 'Delivery or manual test required.')
+          PY
       - name: Prepare and deliver
+        if: steps.delivery.outputs.skip != 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
