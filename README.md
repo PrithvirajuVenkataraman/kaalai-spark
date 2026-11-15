@@ -34,3 +34,22 @@ Telegram has no client idempotency key. A rare timeout after acceptance, a failu
 For local checks: `python -m unittest discover -s tests -v`. For a local preview: `python spark.py --mode preview`.
 
 Existing ChatGPT scheduled tasks are separate. Pause them after the Telegram test succeeds if you want only Telegram delivery.
+
+
+## External scheduler integration
+
+The repository is ready for cron-job.org; external schedules are NOT active until setup succeeds. Built-in GitHub schedules remain as fallback until the external path has been tested.
+
+### One-time private account setup
+
+1. Create or sign in to your free cron-job.org account. In Settings generate an API key. Add it to this repository's Actions secrets as `CRON_JOB_API_KEY`.
+2. In GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens, create a token restricted to **PrithvirajuVenkataraman/kaalai-spark** with repository **Actions: Read and write** only (plus automatic metadata access). Choose an expiry date and record a reminder to renew it. Add it to Actions secrets as `GH_SCHEDULER_TOKEN`. Never send either key in chat or put it in repository files.
+3. Open Actions > **Set Up External Scheduler** > Run workflow on main. This sends the restricted GitHub token to your cron-job.org account as an Authorization header, so that service can start only the permitted workflow operations on this repository. Your Telegram token and chat ID remain in GitHub and are not shared with cron-job.org. The cron-job.org API key remains in Actions secrets for future setup or updates.
+4. Setup validates GitHub access, creates or updates two initially disabled jobs, tests a GitHub dispatch, enables both jobs, and reads their settings back. It prints job IDs and success states only. If setup fails, inspect the scheduler dashboard before rerunning; one job could already be active. Reruns update matching titles rather than adding duplicate jobs.
+5. In cron-job.org, use **Test run** on the morning job. Verify a new GitHub morning run completes. An HTTP success at the scheduler means GitHub accepted a trigger, not that news was delivered. Verify the Actions job and the delivery state separately. If today was already delivered, the test correctly skips sending duplicates.
+
+Two jobs cover **09:45, 09:50, 09:55 IST**, then **every five minutes from 10:00 to 23:55 IST**. External requests use the `scheduled` mode. The 09:45 request collects news and waits until 09:50 to send. Later requests skip work after all categories are sent. Manual `digest` sends immediately, and `test` only sends the connection message.
+
+The external scheduler avoids GitHub's native cron trigger. GitHub runner queues, external scheduling outages, source outages, and token expiry can still delay or prevent delivery. This setup has no exact-minute delivery guarantee. Review cron-job.org execution history and notification settings if updates stop. Setup enables failure/recovery notifications using that account's configured notification channels; these report trigger-request failures, not downstream GitHub job failures.
+
+Renew an expired GitHub token by replacing `GH_SCHEDULER_TOKEN` and rerunning setup, which updates the headers saved in both external jobs.

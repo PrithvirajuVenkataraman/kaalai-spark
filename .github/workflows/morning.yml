@@ -13,7 +13,7 @@ on:
       mode:
         description: 'test = connection only; digest = send today now; preview = no Telegram'
         type: choice
-        options: [test, digest, preview]
+        options: [test, digest, preview, scheduled]
         default: test
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
       - name: Check today's delivery state
         id: delivery
         env:
-          RUN_MODE: ${{ inputs.mode || 'digest' }}
+          RUN_MODE: ${{ inputs.mode == 'scheduled' && 'digest' || inputs.mode || 'digest' }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           python - <<'PY'
@@ -53,12 +53,13 @@ jobs:
       - name: Prepare and deliver
         if: steps.delivery.outputs.skip != 'true'
         env:
+          REQUESTED_MODE: ${{ inputs.mode }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EVENT_NAME: ${{ github.event_name }}
-          RUN_MODE: ${{ inputs.mode || 'digest' }}
+          RUN_MODE: ${{ inputs.mode == 'scheduled' && 'digest' || inputs.mode || 'digest' }}
         run: |
-          if [ "$EVENT_NAME" = "schedule" ]; then
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$REQUESTED_MODE" = "scheduled" ]; then
             python spark.py --mode digest --wait-until-delivery
           else
             python spark.py --mode "$RUN_MODE"

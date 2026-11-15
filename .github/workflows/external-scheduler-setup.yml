@@ -1,0 +1,23 @@
+name: Set Up External Scheduler
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kaalai-external-setup
+  cancel-in-progress: false
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - name: Configure and verify external schedules
+        env:
+          CRON_JOB_API_KEY: ${{ secrets.CRON_JOB_API_KEY }}
+          GH_SCHEDULER_TOKEN: ${{ secrets.GH_SCHEDULER_TOKEN }}
+        run: python configure_scheduler.py
