@@ -1,5 +1,5 @@
 {
-  "delivery_date": "2026-11-14",
+  "delivery_date": "2026-11-15",
   "sent": [
     "ai",
     "news",
@@ -7,6 +7,7 @@
   ],
   "rayban_sent": true,
   "fact_ids": [
-    "1967:American physicist Theodore Maiman is given a patent for his ruby laser systems, the world's first laser."
+    "1967:American physicist Theodore Maiman is given a patent for his ruby laser systems, the world's first laser.",
+    "1988:The first Fairtrade label, Max Havelaar, is launched in the Netherlands."
   ]
 }
