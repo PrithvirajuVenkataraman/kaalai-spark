@@ -3,7 +3,7 @@ name: KaalaiSpark Morning
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/morning.yml'] # Recover today's digest after schedule repairs.
+    paths: ['.github/workflows/morning.yml'] # Recover today's digest after schedule repairs. Recovery: 2026-11-15.
   schedule:
     - cron: '15-59/5 4 * * *' # 09:45, 09:50, ... 10:25 IST.
     - cron: '*/5 5-17 * * *' # Every five minutes, 10:30 through 23:25 IST.
