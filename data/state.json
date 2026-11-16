@@ -1,5 +1,5 @@
 {
-  "delivery_date": "2026-11-15",
+  "delivery_date": "2026-11-16",
   "sent": [
     "ai",
     "news",
@@ -8,6 +8,7 @@
   "rayban_sent": true,
   "fact_ids": [
     "1967:American physicist Theodore Maiman is given a patent for his ruby laser systems, the world's first laser.",
-    "1988:The first Fairtrade label, Max Havelaar, is launched in the Netherlands."
+    "1988:The first Fairtrade label, Max Havelaar, is launched in the Netherlands.",
+    "2022:Artemis Program: NASA launches Artemis 1 on the first flight of the Space Launch System, the start of the program's future missions to the moon."
   ]
 }
