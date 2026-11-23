@@ -73,6 +73,11 @@ def qualify(j, now):
 
 def find_jobs(now, seen, limit=5):
     raw=[]
+    try:
+        from job_ats import collect
+        raw.extend(('employer', item) for item in collect())
+    except (OSError, ValueError, ImportError) as exc:
+        print('Employer discovery unavailable:', type(exc).__name__, flush=True)
     sources=[
         ("remotive","https://remotive.com/api/remote-jobs?limit=300"),
         ("arbeitnow","https://www.arbeitnow.com/api/job-board-api"),
@@ -85,7 +90,7 @@ def find_jobs(now, seen, limit=5):
             print("Jobs source unavailable:", name, type(exc).__name__, flush=True)
     candidates=[]
     for source,item in raw:
-        j=qualify(normalize(item,source),now)
+        j=qualify(item if source=='employer' else normalize(item,source),now)
         if j and j["url"].rstrip("/") not in seen:
             candidates.append(j)
     candidates.sort(key=lambda j:j["posted"],reverse=True)
