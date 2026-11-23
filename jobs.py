@@ -5,16 +5,16 @@ import re
 import urllib.request
 
 AGENT = "KaalaiSpark/1.0"
-BAD = re.compile(r"\\b(contract|contractor|freelance|internship|intern|part.time|temporary|seasonal|commission.only)\\b", re.I)
-SKILLS = re.compile(r"\\b(data analyst|data quality|quality analyst|llm|ai evaluation|model evaluation|ai operations|data operations|analytics engineer|business intelligence|python developer|sql analyst|annotation quality|ai trainer)\\b", re.I)
-SENIOR = re.compile(r"\\b(senior|staff|principal|lead|director|head of|manager|architect)\\b", re.I)
-EXPERIENCE = re.compile(r"\\b([4-9]|1[0-9])\\s*\\+?\\s*(?:years|yrs)\\b", re.I)
-NIGHT = re.compile(r"\\b(night shift|overnight|graveyard|us shift|est hours|pst hours|pacific time hours|american working hours)\\b", re.I)
-DAY = re.compile(r"\\b(flexible (?:working )?hours|async(?:hronous)?|india (?:standard )?time|ist (?:working )?hours|india daytime|work your own hours)\\b", re.I)
-INDIA = re.compile(r"\\b(india|india-based|based in india|remote from india)\\b", re.I)
-SPONSOR = re.compile(r"\\b(visa sponsorship (?:is )?(?:available|provided|offered)|sponsor (?:a |your )?(?:work )?visa|work visa sponsorship)\\b", re.I)
-RELOCATE = re.compile(r"\\b(relocation (?:assistance|support|package) (?:is )?(?:available|provided|offered|included)|visa and relocation support|relocation expenses covered)\\b", re.I)
-NO_SPONSOR = re.compile(r"\\b(no visa sponsorship|cannot sponsor|sponsorship not available|without sponsorship)\\b", re.I)
+BAD = re.compile(r"\b(contract|contractor|freelance|internship|intern|part.time|temporary|seasonal|commission.only)\b", re.I)
+SKILLS = re.compile(r"\b(data analyst|data quality|quality analyst|llm|ai evaluation|model evaluation|ai operations|data operations|analytics engineer|business intelligence|python developer|sql analyst|annotation quality|ai trainer)\b", re.I)
+SENIOR = re.compile(r"\b(senior|staff|principal|lead|director|head of|manager|architect)\b", re.I)
+EXPERIENCE = re.compile(r"\b([4-9]|1[0-9])\s*\+?\s*(?:years|yrs)\b", re.I)
+NIGHT = re.compile(r"\b(night shift|overnight|graveyard|us shift|est hours|pst hours|pacific time hours|american working hours)\b", re.I)
+DAY = re.compile(r"\b(flexible (?:working )?hours|async(?:hronous)?|india (?:standard )?time|ist (?:working )?hours|india daytime|work your own hours)\b", re.I)
+INDIA = re.compile(r"\b(india|india-based|based in india|remote from india)\b", re.I)
+SPONSOR = re.compile(r"\b(visa sponsorship (?:is )?(?:available|provided|offered)|sponsor (?:a |your )?(?:work )?visa|work visa sponsorship)\b", re.I)
+RELOCATE = re.compile(r"\b(relocation (?:assistance|support|package) (?:is )?(?:available|provided|offered|included)|visa and relocation support|relocation expenses covered)\b", re.I)
+NO_SPONSOR = re.compile(r"\b(no visa sponsorship|cannot sponsor|sponsorship not available|without sponsorship)\b", re.I)
 
 def fetch(url):
     request = urllib.request.Request(url, headers={"User-Agent": AGENT, "Accept": "application/json"})
@@ -22,7 +22,7 @@ def fetch(url):
         return json.load(response)
 
 def clean_html(value):
-    return re.sub(r"\\s+", " ", re.sub(r"<[^>]*>", " ", value or "")).strip()
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", value or "")).strip()
 
 def normalize(raw, source):
     if source == "remotive":
@@ -43,7 +43,7 @@ def qualify(j, now):
         return None
     if SENIOR.search(title) or EXPERIENCE.search(body[:10000]):
         return None
-    if re.search(r"\\b(part.time|contract|freelance|temporary|internship)\\b", body[:1800], re.I):
+    if re.search(r"\b(part.time|contract|freelance|temporary|internship)\b", body[:1800], re.I):
         return None
     if j["type"] and "full" not in j["type"].lower():
         return None
@@ -63,7 +63,7 @@ def qualify(j, now):
     # Relocation requires affirmative evidence for both sponsorship and assistance.
     if remote_india:
         path="Remote from India, daytime/flexible hours stated"
-    elif relocation and not re.search(r"\\bindia only\\b",body,re.I):
+    elif relocation and not re.search(r"\bindia only\b",body,re.I):
         path="Relocation and visa support stated; India applicant eligibility needs confirmation"
     else:
         return None
@@ -110,4 +110,4 @@ def build_message(now, seen):
                       f"Posted: {j['posted'].strftime('%d %b %Y %H:%M UTC')}",
                       f"Source: {j['source']} (description-based checks; confirm with employer)",
                       f"Apply: {j['url']}",""])
-    return "\\n".join(lines),[j["url"].rstrip("/") for j in jobs]
+    return "\n".join(lines),[j["url"].rstrip("/") for j in jobs]
