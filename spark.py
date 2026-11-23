@@ -16,6 +16,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
+import jobs
 
 IST = ZoneInfo('Asia/Kolkata')
 STATE_PATH = Path('data/state.json')
@@ -257,7 +258,7 @@ def wait_until_delivery(now_func=lambda: datetime.now(IST), sleeper=time.sleep):
 
 def delivery_complete(state, now):
     return (state.get('delivery_date') == now.date().isoformat()
-            and {'ai', 'news', 'fact'}.issubset(state.get('sent', [])))
+            and {'ai', 'news', 'fact', 'jobs'}.issubset(state.get('sent', [])))
 
 
 def skip_attempt(state, now, event, mode):
@@ -283,6 +284,8 @@ def main():
         print('No delivery needed for this attempt.')
         return
     messages = build_digest(now, state)
+    job_message, job_urls = jobs.build_message(now, set(state.get('job_urls', [])))
+    messages.append(('jobs', job_message, None))
     if args.mode == 'preview':
         for _, message, _ in messages:
             print(message + '\n\n')
@@ -301,6 +304,8 @@ def main():
             continue
         send_telegram(message)
         state.setdefault('sent', []).append(key)
+        if key == 'jobs':
+            state['job_urls'] = (state.get('job_urls', []) + job_urls)[-3000:]
         if fact_id == 'rayban':
             state['rayban_sent'] = True
         elif fact_id:
